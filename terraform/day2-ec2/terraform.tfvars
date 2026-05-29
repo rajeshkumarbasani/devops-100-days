@@ -1,5 +1,5 @@
 aws_region = "ap-south-1"
-availability_zone = "ap-south-1a"
+aws_availability_zone = "ap-south-1a"
 ami_id = "ami-0f58b397bc5c1f2e8"
 instance_type = "t2.micro"
 key_name = "server-cp"
