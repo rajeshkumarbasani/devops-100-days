@@ -45,8 +45,7 @@ resource "aws_route_table_association" "day2_rta" {
   subnet_id = aws_subnet.day2_subnet.id
   route_table_id = aws_route_table.day2_rt.id
 }
-resource "aws_security_group" "day2_sg"
-{
+resource "aws_security_group" "day2_sg" {
   name = "DevOps-Day2-Terraform-SG"
   description = "Security group for EC2 instance"
   vpc_id = aws_vpc.day2_vpc.id
