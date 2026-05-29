@@ -8,6 +8,7 @@ variable "ami_id"{
     description = "AMI ID for EC2 instance"
 }
 variable "aws_availability_zone" {}
+variable "key_name" {}
 
 variable "instance_type"{
     default = "t2.micro"
