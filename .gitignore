@@ -1,4 +1,5 @@
 *.pem
+credentials.txt
 **/.terraform/
 *.tfstate
 *.tfstate.*
