@@ -50,7 +50,7 @@ resource "aws_route_table_association" "day4_public_assoc" {
 }
 
 module "web_server" {
-  source        = "../../modules/ec2"
+  source = "../../modules/ec2"
 
   ami_id        = var.ami_id
   instance_type = var.instance_type
