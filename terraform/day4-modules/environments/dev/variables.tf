@@ -7,8 +7,8 @@ variable "key_name" {}
 variable "my_ip" {}
 
 variable "vpc_cidr" {
-    default = "10.20.0.0/16"
+  default = "10.20.0.0/16"
 }
 variable "public_subnet_cidr" {
-    default = "10.20.1.0/24"
+  default = "10.20.1.0/24"
 }
