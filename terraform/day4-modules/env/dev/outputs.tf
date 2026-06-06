@@ -1,19 +1,19 @@
 output "vpc_id" {
-  value = aws_vpc.day4_vpc.id
+  value = aws_vpc.main.id
 }
 
 output "public_subnet_id" {
-  value = aws_subnet.day4_public_subnet.id
+  value = aws_subnet.public.id
 }
 
-output "instance_id" {
-  value = module.web_server.instance_id
+output "ec2_instance_id" {
+  value = module.day4_ec2.instance_id
 }
 
-output "instance_public_ip" {
-  value = module.web_server.public_ip
+output "ec2_public_ip" {
+  value = module.day4_ec2.public_ip
 }
 
 output "security_group_id" {
-  value = module.web_server.security_group_id
+  value = module.day4_ec2.security_group_id
 }
