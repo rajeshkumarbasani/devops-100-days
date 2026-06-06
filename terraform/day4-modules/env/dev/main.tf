@@ -58,13 +58,13 @@ module "day4_ec2" {
 
   project_name  = var.project_name
   environment   = var.environment
-  ami_id         = var.ami_id
-  instance_type  = var.instance_type
-  key_name       = var.key_name
-  vpc_id         = aws_vpc.main.id
-  subnet_id      = aws_subnet.public.id
-  my_ip          = var.my_ip
-  volume_size    = var.volume_size
+  ami_id        = var.ami_id
+  instance_type = var.instance_type
+  key_name      = var.key_name
+  vpc_id        = aws_vpc.main.id
+  subnet_id     = aws_subnet.public.id
+  my_ip         = var.my_ip
+  volume_size   = var.volume_size
 
   tags = {
     Project     = var.project_name
