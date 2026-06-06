@@ -1,4 +1,4 @@
-variable "project_name"{}
+variable "project_name" {}
 variable "environment" {}
 variable "ami_id" {}
 variable "instance_type" {}
@@ -8,15 +8,15 @@ variable "subnet_id" {}
 variable "my_ip" {}
 
 variable "volume_size" {
-    default = 20
+  default = 20
 }
 
 variable "http_allowed_cider" {
-    type = list(string)
-    default = ["0.0.0.0/0"]
+  type    = list(string)
+  default = ["0.0.0.0/0"]
 }
 
 variable "tags" {
-    type = map(string)
-    default = {}
+  type    = map(string)
+  default = {}
 }
