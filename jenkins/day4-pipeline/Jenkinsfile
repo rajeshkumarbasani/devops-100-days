@@ -1,0 +1,84 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "day4-nginx-app"
+        DOCKER_CONTAINER = "day4-nginx"
+        APP_PORT = "8084"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                dir('docker/day4-app') {
+                    sh 'docker build -t $DOCKER_IMAGE:latest .'
+                }
+            }
+        }
+
+        stage('Docker Test') {
+            steps {
+                sh '''
+                    docker rm -f $DOCKER_CONTAINER || true
+                    docker run -d -p $APP_PORT:80 --name $DOCKER_CONTAINER $DOCKER_IMAGE:latest
+                    sleep 5
+                    curl -f http://localhost:$APP_PORT
+                '''
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir('terraform/day4-modules/env/dev') {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                dir('terraform/day4-modules/env/dev') {
+                    sh 'terraform fmt -check -recursive'
+                    sh 'terraform validate'
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                dir('terraform/day4-modules/env/dev') {
+                    sh 'terraform plan'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform/day4-modules/env/dev') {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Day 4 pipeline completed successfully.'
+        }
+
+        failure {
+            echo 'Day 4 pipeline failed.'
+        }
+
+        always {
+            sh 'docker ps'
+        }
+    }
+}
