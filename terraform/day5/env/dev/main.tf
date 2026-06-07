@@ -1,56 +1,56 @@
 provider "aws" {
-    region = var.aws_region
+  region = var.aws_region
 }
 
 resource "aws_vpc" "main" {
-    cidr_block = var.vpc_cidr
-    enable_dns_support = true
-    enable_dns_hostnames = true
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 
-    tags = {
-        Name = "${var.project_name}-${var.environment}-vpc"
-        Environment = var.environment
-    }
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-vpc"
+    Environment = var.environment
+  }
 }
 
 resource "aws_subnet" "public" {
-    vpc_id = aws_vpc.main.id
-    cidr_block = var.public_subnet_cidr
-    availability_zone = var.availability_zone
-    map_public_ip_on_launch = true
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
+  availability_zone       = var.availability_zone
+  map_public_ip_on_launch = true
 
-    tags = {
-        Name = "${var.project_name}-${var.environment}-public-subnet"
-        Environment = var.environment
-    }
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-public-subnet"
+    Environment = var.environment
+  }
 }
 
 resource "aws_internet_gateway" "igw" {
-    vpc_id = aws_vpc.main.id
+  vpc_id = aws_vpc.main.id
 
-    tags = {
-        Name = "${var.project_name}-${var.environment}-igw"
-        Environment = var.environment
-    }
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-igw"
+    Environment = var.environment
+  }
 }
 
 resource "aws_route_table" "public" {
-    vpc_id = aws_vpc.main.id
+  vpc_id = aws_vpc.main.id
 
-    route {
-        cidr_block = "0.0.0.0/0"
-        gateway_id = aws_internet_gateway.igw.id
-    }
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
 
-    tags = {
-        Name = "${var.project_name}-${var.environment}-public-rt"
-        Environment = var.environment
-    }
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-public-rt"
+    Environment = var.environment
+  }
 }
-  
+
 resource "aws_route_table_association" "public" {
-    subnet_id = aws_subnet.public.id
-    route_table_id = aws_route_table.public.id
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
 }
 
 module "ec2" {
@@ -58,13 +58,13 @@ module "ec2" {
 
   project_name  = var.project_name
   environment   = var.environment
-  ami_id         = var.ami_id
-  instance_type  = var.instance_type
-  key_name       = var.key_name
-  vpc_id         = aws_vpc.main.id
-  subnet_id      = aws_subnet.public.id
-  my_ip          = var.my_ip
-  volume_size    = var.volume_size
+  ami_id        = var.ami_id
+  instance_type = var.instance_type
+  key_name      = var.key_name
+  vpc_id        = aws_vpc.main.id
+  subnet_id     = aws_subnet.public.id
+  my_ip         = var.my_ip
+  volume_size   = var.volume_size
 
   tags = {
     Project     = var.project_name
