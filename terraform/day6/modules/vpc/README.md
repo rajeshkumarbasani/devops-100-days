@@ -1,6 +1,6 @@
 # VPC Module
 
-This Terraform module provision a basic AWS networking stack for Day 6.
+This Terraform module provisions a basic AWS networking stack for Day 6.
 It creates a VPC, a public subnet, an internet gateway, a public route table, and a route table association.
 
 ## What the module creates
@@ -32,7 +32,7 @@ It creates a VPC, a public subnet, an internet gateway, a public route table, an
 
 ## Where it is used
 
-This module is used by `terraform/day6/env/dev/main.tf`:
+This module is used by [`terraform/day6/env/dev/main.tf`](../env/dev/main.tf):
 
 ```hcl
 module "vpc" {
@@ -51,6 +51,11 @@ The output values from this module are consumed by the EC2 module in the same en
 
 - `module.vpc.vpc_id`
 - `module.vpc.public_subnet_id`
+
+## Module integration
+
+- See [`../env/dev/main.tf`](../env/dev/main.tf) to understand how the VPC module is wired into the `dev` environment.
+- See [`../ec2/README.md`](../ec2/README.md) for the EC2 module that uses the network outputs.
 
 ## Why this module exists
 

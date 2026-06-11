@@ -5,9 +5,9 @@ The setup provisions a VPC and an EC2 instance using reusable Terraform modules.
 
 ## Structure
 
-- `modules/vpc` - creates the VPC, public subnet, internet gateway, and route table.
-- `modules/ec2` - creates an EC2 instance inside the VPC public subnet.
-- `env/dev` - environment configuration for the `dev` deployment.
+- [`modules/vpc`](modules/vpc) - creates the VPC, public subnet, internet gateway, and route table.
+- [`modules/ec2`](modules/ec2) - creates an EC2 instance inside the VPC public subnet.
+- [`env/dev`](env/dev) - environment configuration for the `dev` deployment.
 
 ## Provisioning AWS Resources
 
@@ -17,11 +17,15 @@ The setup provisions a VPC and an EC2 instance using reusable Terraform modules.
 cd terraform/day6/env/dev
 ```
 
+This command changes the current directory to the Day 6 development environment.
+
 ### 2. Format configuration files
 
 ```bash
 terraform fmt -recursive
 ```
+
+Formats all Terraform files in the current module and subdirectories.
 
 ### 3. Initialize Terraform
 
@@ -29,11 +33,15 @@ terraform fmt -recursive
 terraform init
 ```
 
+Downloads providers, initializes the working directory, and prepares the environment.
+
 ### 4. Validate the configuration
 
 ```bash
 terraform validate
 ```
+
+Checks the syntax and internal consistency of Terraform configuration files.
 
 ### 5. Review the plan
 
@@ -41,13 +49,25 @@ terraform validate
 terraform plan
 ```
 
+Shows the execution plan so you can inspect the proposed changes before applying them.
+
 ### 6. Apply the deployment
 
 ```bash
 terraform apply -auto-approve
 ```
 
-This command provisions the AWS resources defined in the `env/dev` environment, including the VPC and EC2 instance.
+Applies the Terraform plan and provisions resources defined in `env/dev/main.tf`.
+
+## Module flow
+
+The `env/dev/main.tf` file uses:
+
+- [`modules/vpc`](modules/vpc)
+- [`modules/ec2`](modules/ec2)
+
+The VPC module builds network resources and exposes `vpc_id` and `public_subnet_id`.
+The EC2 module consumes those outputs to launch the instance into the created subnet.
 
 ## Environment Configuration
 
@@ -60,16 +80,14 @@ The `env/dev` configuration passes variables to both modules:
 
 ## Clean up and save credits
 
-When you no longer need the environment, destroy it:
-
 ```bash
 terraform destroy -auto-approve
 ```
 
-This removes the provisioned AWS resources and helps avoid ongoing AWS costs.
+Destroys all resources created by the deployment and prevents ongoing cloud costs.
 
 ## Notes
 
-- The `vpc` module creates the VPC, public subnet, internet gateway, and route table.
-- The `ec2` module launches the instance into the public subnet and uses the VPC created by the `vpc` module.
-- This repository uses a modular approach so the network and compute resources can be reused in other environments.
+- The [`vpc` module](modules/vpc/README.md) creates the VPC, public subnet, internet gateway, and route table.
+- The [`ec2` module](modules/ec2/README.md) launches the instance into the public subnet and uses the VPC created by the `vpc` module.
+- This repository uses a modular approach so network and compute resources can be reused in other environments.
