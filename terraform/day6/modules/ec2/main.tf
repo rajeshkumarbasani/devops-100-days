@@ -82,7 +82,7 @@ HTML
 
   root_block_device {
     volume_size = var.volume_size
-    volume_type = "gp3"
+    volume_type = var.volume_type
     encrypted   = true
   }
 
