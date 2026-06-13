@@ -8,13 +8,15 @@ variable "subnet_id" {}
 variable "my_ip" {}
 
 variable "volume_size" {
+  type    = number
   default = 20
+
   validation {
-    condition     = can(length(var.volume_size) >= 10)
+    condition     = var.volume_size >= 10
     error_message = "The volume_size value must be more than or equal to 10 gb."
   }
   validation {
-    condition     = can(length(var.volume_size) <= 20)
+    condition     = var.volume_size <= 20
     error_message = "The volume_size value must be less than or equal to 20 gb."
   }
 }
