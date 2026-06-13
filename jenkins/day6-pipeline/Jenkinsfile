@@ -1,0 +1,136 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr : '10'))
+        timeout(time:30, unit: 'MINUTES')
+    }
+
+    environment {
+        DOCKER_IMAGE = "day6-nginx-app"
+        DOCKER_CONTAINER = "day6-nginx"
+        APP_PORT = "8086"
+        TF_DIR = "terraform/day6/env/dev"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                dir('docker/day6-app') {
+                    sh '''
+                    docker build \
+                        --no-cache \
+                        -t $DOCKER_IMAGE:${BUILD_NUMBER} \
+                        -t $DOCKER_IMAGE:latest .
+                    '''
+
+                }
+            }
+        }
+
+        stage('Docker Security Check Basic') {
+            steps {
+                sh '''
+                docker image inspect $DOCKER_IMAGE:latest
+                docker history $DOCKER_IMAGE:latest
+                '''
+            }
+        }
+
+        stage ('Docker Run Test') {
+            steps {
+                sh '''
+                    docker rm -f $DOCKER_CONTAINER || true
+
+                    docker run -d \
+                        --name $DOCKER_CONTAINER \
+                        $DOCKER_IMAGE:latest
+
+                    sleep 5
+                    
+                    curl -f http://localhost:$APP_PORT
+                    curl -f http://localhost:$APP_PORT/health
+                '''
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Format Check') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform fmt -check -recursive'
+                }
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform validate'
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform plan -out=tfplan'
+                }
+            }
+        }
+
+        stage('Manual Approval') {
+            steps {
+                input message: 'Approve Day 6 Terraform Apply?'
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+
+        stage('Show Terraform Output') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'terraform output'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Day 6 pipeline completed successfully.'
+        }
+
+        failure {
+            echo 'Day 6 pipeline failed.'
+        }
+
+        always {
+            sh '''
+              docker rm -f $DOCKER_CONTAINER || true
+              docker image prune -f || true
+            '''
+        }
+    }
+}
