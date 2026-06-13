@@ -12,6 +12,7 @@ pipeline {
         DOCKER_IMAGE = "day6-nginx-app"
         DOCKER_CONTAINER = "day6-nginx"
         APP_PORT = "8086"
+        CONTAINER_PORT = "8080"
         TF_DIR = "terraform/day6/env/dev"
     }
 
@@ -52,7 +53,8 @@ pipeline {
 
                     docker run -d \
                         --name $DOCKER_CONTAINER \
-                        $DOCKER_IMAGE:latest
+                        -p $APP_PORT:$CONTAINER_PORT \
+                        $DOCKER_IMAGE:latest 
 
                     sleep 5
                     
