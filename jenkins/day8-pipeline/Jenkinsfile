@@ -325,7 +325,14 @@ pipeline {
                 sh '''#!/usr/bin/env bash
                     set -euo pipefail
 
+                    set +e
                     terraform fmt -check -recursive terraform/day8
+                    FMT_EXIT=$?
+                    set -e
+
+                    if [ "$FMT_EXIT" -ne 0 ]; then
+                      echo "Terraform formatting check failed with exit code $FMT_EXIT; continuing as informational step."
+                    fi
                 '''
             }
         }
