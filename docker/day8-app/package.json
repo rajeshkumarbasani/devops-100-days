@@ -1,0 +1,23 @@
+{
+  "name": "day8-devops-app",
+  "version": "1.0.0",
+  "description": "Day 8 production-style Node.js DevOps application",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "test:ci": "node --test --test-reporter=spec",
+    "check": "node --check src/app.js && node --check src/server.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "express": "5.1.0",
+    "helmet": "8.1.0"
+  },
+  "devDependencies": {
+    "supertest": "7.1.1"
+  }
+}
