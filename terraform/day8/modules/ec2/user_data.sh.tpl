@@ -55,7 +55,7 @@ ExecStartPre=-/usr/bin/docker rm -f \${container_name}
 ExecStartPre=/usr/bin/docker pull \${docker_image}
 
 ExecStart=/usr/bin/docker run \
-  --name \${container_name} \
+  --name ${container_name} \
   --read-only \
   --tmpfs /tmp:size=16m,mode=1777 \
   --security-opt no-new-privileges:true \

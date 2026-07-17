@@ -85,7 +85,7 @@ pipeline {
                 dir("${TF_DIR}") {
                     withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding',
-                     credentialsId: 'aws-cred']
+                     credentialsId: 'aws-creds']
                 ]) {
                         sh 'terraform init'
                     }
@@ -98,7 +98,7 @@ pipeline {
                 dir("${TF_DIR}") {
                     withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding',
-                     credentialsId: 'aws-cred']
+                     credentialsId: 'aws-creds']
                 ]) {
                         sh '''
                           terraform fmt -check -recursive
@@ -114,7 +114,7 @@ pipeline {
                 dir("${TF_DIR}") {
                     withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding',
-                     credentialsId: 'aws-cred']
+                     credentialsId: 'aws-creds']
                 ]) {
                         sh '''
                           terraform plan \
@@ -137,7 +137,7 @@ pipeline {
                 dir("${TF_DIR}") {
                     withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding',
-                     credentialsId: 'aws-cred']
+                     credentialsId: 'aws-creds']
                 ]) {
                         sh 'terraform apply -auto-approve tfplan'
                     }
@@ -150,7 +150,7 @@ pipeline {
                 dir("${TF_DIR}") {
                     withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding',
-                     credentialsId: 'aws-cred']
+                     credentialsId: 'aws-creds']
                 ]) {
                         sh 'terraform output'
                     }

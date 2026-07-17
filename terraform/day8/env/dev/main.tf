@@ -30,7 +30,7 @@ module "ec2" {
   project_name = var.project_name
   environment  = var.environment
 
-  vpc_id   = module.vpc.vpc_id
+  vpc_id    = module.vpc.vpc_id
   subnet_id = module.vpc.public_subnet_id
 
   ami_id        = data.aws_ssm_parameter.amazon_linux_2023_ami.value
