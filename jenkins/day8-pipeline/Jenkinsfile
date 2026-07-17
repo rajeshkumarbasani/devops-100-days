@@ -282,30 +282,40 @@ pipeline {
 
         stage('Push Docker Hub Image') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'docker-hub-creds',
-                        usernameVariable: 'DOCKERHUB_USERNAME',
-                        passwordVariable: 'DOCKERHUB_TOKEN'
-                    )
-                ]) {
-                    sh '''#!/usr/bin/env bash
-                        set +x
-                        set -euo pipefail
+                script {
+                    try {
+                        withCredentials([
+                            usernamePassword(
+                                credentialsId: 'docker-hub-creds',
+                                usernameVariable: 'DOCKERHUB_USERNAME',
+                                passwordVariable: 'DOCKERHUB_TOKEN'
+                            )
+                        ]) {
+                            sh '''#!/usr/bin/env bash
+                                set +x
+                                set -euo pipefail
 
-                        echo "$DOCKERHUB_TOKEN" |
-                          docker login \
-                            --username "$DOCKERHUB_USERNAME" \
-                            --password-stdin
+                                echo "$DOCKERHUB_TOKEN" |
+                                  docker login \
+                                    --username "$DOCKERHUB_USERNAME" \
+                                    --password-stdin
 
-                        docker push "$IMMUTABLE_IMAGE"
+                                docker push "$IMMUTABLE_IMAGE"
 
-                        if [ "$PUSH_LATEST_TAG" = "true" ]; then
-                          docker push "$LATEST_IMAGE"
-                        fi
+                                if [ "$PUSH_LATEST_TAG" = "true" ]; then
+                                  docker push "$LATEST_IMAGE"
+                                fi
 
-                        docker logout
-                    '''
+                                docker logout
+                            '''
+                        }
+                    } catch (Exception e) {
+                        if (e.getMessage().contains('Could not find credentials entry')) {
+                            echo "Docker Hub credentials are not configured; skipping image push."
+                        } else {
+                            throw e
+                        }
+                    }
                 }
             }
         }
