@@ -67,7 +67,6 @@ ExecStart=/usr/bin/docker run \
   --log-opt max-size=10m \
   --log-opt max-file=3 \
   -e NODE_ENV=production \
-  -e APP_VERSION= ${docker_image} \
   -p ${host_port}:${application_port} \
   ${docker_image}
 
