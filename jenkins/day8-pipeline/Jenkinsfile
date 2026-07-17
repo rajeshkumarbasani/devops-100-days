@@ -40,6 +40,8 @@ pipeline {
 
         DOCKER_REPOSITORY = 'raj358822/day8-node-app'
         DOCKER_CONTEXT = 'docker/day8-app'
+        BUILD_CONTEXT = 'docker/day8-app'
+
         TEST_CONTAINER = 'day8-app-test'
         TEST_PORT = '8088'
 
@@ -105,7 +107,7 @@ pipeline {
 
         stage('Application Tests') {
             steps {
-                dir("${DOCKER_CONTEXT}") {
+                dir("${BUILD_CONTEXT}") {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
 
@@ -121,7 +123,7 @@ pipeline {
 
         stage('Build Production Image') {
             steps {
-                dir("${DOCKER_CONTEXT}") {
+                dir("${BUILD_CONTEXT}") {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
 
