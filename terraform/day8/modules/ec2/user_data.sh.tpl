@@ -51,8 +51,8 @@ RestartSec=10
 TimeoutStartSec=180
 TimeoutStopSec=30
 
-ExecStartPre=-/usr/bin/docker rm -f \${container_name}
-ExecStartPre=/usr/bin/docker pull \${docker_image}
+ExecStartPre=-/usr/bin/docker rm -f ${container_name}
+ExecStartPre=/usr/bin/docker pull ${docker_image}
 
 ExecStart=/usr/bin/docker run \
   --name ${container_name} \
@@ -67,12 +67,12 @@ ExecStart=/usr/bin/docker run \
   --log-opt max-size=10m \
   --log-opt max-file=3 \
   -e NODE_ENV=production \
-  -e APP_VERSION=\${docker_image} \
-  -p \${host_port}:\${application_port} \
-  \${docker_image}
+  -e APP_VERSION= ${docker_image} \
+  -p ${host_port}: ${application_port} \
+  ${docker_image}
 
-ExecStop=/usr/bin/docker stop --time 20 \${container_name}
-ExecStopPost=-/usr/bin/docker rm -f \${container_name}
+ExecStop=/usr/bin/docker stop --time 20 ${container_name}
+ExecStopPost=-/usr/bin/docker rm -f ${container_name}
 
 [Install]
 WantedBy=multi-user.target
