@@ -249,6 +249,7 @@ pipeline {
                       -v "$WORKSPACE/reports:/reports" \
                       "aquasec/trivy:${TRIVY_VERSION}" \
                       image \
+                      --skip-db-update \
                       --scanners vuln \
                       --severity HIGH,CRITICAL \
                       --ignore-unfixed \
@@ -354,6 +355,7 @@ BACKEND
                       -w /workspace \
                       "aquasec/trivy:${TRIVY_VERSION}" \
                       config \
+                      --skip-db-update \
                       --severity HIGH,CRITICAL \
                       --exit-code 1 \
                       terraform/day8
