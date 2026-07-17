@@ -89,8 +89,8 @@ pipeline {
 
         stage('Repository Validation') {
             steps {
-                sh '''
-                    set -Eeuo pipefail
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
 
                     test -f "$DOCKER_CONTEXT/Dockerfile"
                     test -f "$DOCKER_CONTEXT/package.json"
@@ -106,8 +106,8 @@ pipeline {
         stage('Application Tests') {
             steps {
                 dir("${DOCKER_CONTEXT}") {
-                    sh '''
-                        set -Eeuo pipefail
+                    sh '''#!/usr/bin/env bash
+                        set -euo pipefail
 
                         docker build \
                           --pull \
@@ -122,8 +122,8 @@ pipeline {
         stage('Build Production Image') {
             steps {
                 dir("${DOCKER_CONTEXT}") {
-                    sh '''
-                        set -Eeuo pipefail
+                    sh '''#!/usr/bin/env bash
+                        set -euo pipefail
 
                         DOCKER_BUILDKIT=1 docker build \
                           --pull \
@@ -141,8 +141,8 @@ pipeline {
 
         stage('Image Metadata Validation') {
             steps {
-                sh '''
-                    set -Eeuo pipefail
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
 
                     docker image inspect "$IMMUTABLE_IMAGE"
 
@@ -174,8 +174,8 @@ pipeline {
 
         stage('Container Security Test') {
             steps {
-                sh '''
-                    set -Eeuo pipefail
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
 
                     docker rm -f "$TEST_CONTAINER" 2>/dev/null || true
 
@@ -236,8 +236,8 @@ pipeline {
 
         stage('Trivy Vulnerability Scan') {
             steps {
-                sh '''
-                    set -Eeuo pipefail
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
 
                     mkdir -p reports
 
@@ -277,9 +277,9 @@ pipeline {
                         passwordVariable: 'DOCKERHUB_TOKEN'
                     )
                 ]) {
-                    sh '''
+                    sh '''#!/usr/bin/env bash
                         set +x
-                        set -Eeuo pipefail
+                        set -euo pipefail
 
                         echo "$DOCKERHUB_TOKEN" |
                           docker login \
@@ -300,8 +300,8 @@ pipeline {
 
         stage('Terraform Format') {
             steps {
-                sh '''
-                    set -Eeuo pipefail
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
 
                     terraform fmt -check -recursive terraform/day8
                 '''
@@ -319,9 +319,9 @@ pipeline {
                     ]
                 ]) {
                     dir("${TF_DIR}") {
-                        sh '''
+                        sh '''#!/usr/bin/env bash
                             set +x
-                            set -Eeuo pipefail
+                            set -euo pipefail
 
                             cat > backend.hcl <<BACKEND
 bucket       = "$TF_STATE_BUCKET"
@@ -344,8 +344,8 @@ BACKEND
 
         stage('Terraform Security Check') {
             steps {
-                sh '''
-                    set -Eeuo pipefail
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
 
                     docker run --rm \
                       -v "$WORKSPACE:/workspace" \
@@ -370,9 +370,9 @@ BACKEND
                     ]
                 ]) {
                     dir("${TF_DIR}") {
-                        sh '''
+                        sh '''#!/usr/bin/env bash
                             set +x
-                            set -Eeuo pipefail
+                            set -euo pipefail
 
                             terraform plan \
                               -lock-timeout=5m \
@@ -437,9 +437,9 @@ BACKEND
                     ]
                 ]) {
                     dir("${TF_DIR}") {
-                        sh '''
+                        sh '''#!/usr/bin/env bash
                             set +x
-                            set -Eeuo pipefail
+                            set -euo pipefail
 
                             terraform apply \
                               -lock-timeout=5m \
@@ -477,8 +477,8 @@ BACKEND
 
             steps {
                 dir("${TF_DIR}") {
-                    sh '''
-                        set -Eeuo pipefail
+                    sh '''#!/usr/bin/env bash
+                        set -euo pipefail
 
                         APPLICATION_URL="$(cat application-url.txt)"
                         HEALTH_URL="$(cat health-url.txt)"
@@ -536,7 +536,7 @@ BACKEND
         }
 
         always {
-            sh '''
+            sh '''#!/usr/bin/env bash
                 docker rm -f "$TEST_CONTAINER" 2>/dev/null || true
                 docker logout 2>/dev/null || true
 
