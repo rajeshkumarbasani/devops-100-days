@@ -68,7 +68,7 @@ ExecStart=/usr/bin/docker run \
   --log-opt max-file=3 \
   -e NODE_ENV=production \
   -e APP_VERSION= ${docker_image} \
-  -p ${host_port}: ${application_port} \
+  -p ${host_port}:${application_port} \
   ${docker_image}
 
 ExecStop=/usr/bin/docker stop --time 20 ${container_name}
@@ -89,6 +89,6 @@ retry 12 curl \
   --fail \
   --silent \
   --show-error \
-  "http://127.0.0.1:$host_port/health/ready"
+  "http://127.0.0.1:${host_port}/health/ready"
 
 echo "Day 8 deployment completed successfully."
