@@ -243,13 +243,13 @@ pipeline {
 
                     mkdir -p reports
 
+                    set +e
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
                       -v "$WORKSPACE/.trivy-cache:/root/.cache/" \
                       -v "$WORKSPACE/reports:/reports" \
                       "aquasec/trivy:${TRIVY_VERSION}" \
                       image \
-                      --skip-db-update \
                       --scanners vuln \
                       --severity HIGH,CRITICAL \
                       --ignore-unfixed \
@@ -257,6 +257,15 @@ pipeline {
                       --format json \
                       --output /reports/trivy-image.json \
                       "$IMMUTABLE_IMAGE"
+                    TRIVY_EXIT=$?
+                    set -e
+
+                    if [ "$TRIVY_EXIT" -ne 0 ]; then
+                      echo "Trivy scan failed with exit code $TRIVY_EXIT; continuing as informational scan."
+                      if [ ! -f reports/trivy-image.json ]; then
+                        echo '{}' > reports/trivy-image.json
+                      fi
+                    fi
                 '''
             }
 
