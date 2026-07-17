@@ -51,11 +51,11 @@ RestartSec=10
 TimeoutStartSec=180
 TimeoutStopSec=30
 
-ExecStartPre=-/usr/bin/docker rm -f \${CONTAINER_NAME}
-ExecStartPre=/usr/bin/docker pull \${DOCKER_IMAGE}
+ExecStartPre=-/usr/bin/docker rm -f \${container_name}
+ExecStartPre=/usr/bin/docker pull \${docker_image}
 
 ExecStart=/usr/bin/docker run \
-  --name \${CONTAINER_NAME} \
+  --name \${container_name} \
   --read-only \
   --tmpfs /tmp:size=16m,mode=1777 \
   --security-opt no-new-privileges:true \
@@ -67,12 +67,12 @@ ExecStart=/usr/bin/docker run \
   --log-opt max-size=10m \
   --log-opt max-file=3 \
   -e NODE_ENV=production \
-  -e APP_VERSION=\${DOCKER_IMAGE} \
-  -p \${HOST_PORT}:\${APPLICATION_PORT} \
-  \${DOCKER_IMAGE}
+  -e APP_VERSION=\${docker_image} \
+  -p \${host_port}:\${application_port} \
+  \${docker_image}
 
-ExecStop=/usr/bin/docker stop --time 20 \${CONTAINER_NAME}
-ExecStopPost=-/usr/bin/docker rm -f \${CONTAINER_NAME}
+ExecStop=/usr/bin/docker stop --time 20 \${container_name}
+ExecStopPost=-/usr/bin/docker rm -f \${container_name}
 
 [Install]
 WantedBy=multi-user.target
@@ -89,6 +89,6 @@ retry 12 curl \
   --fail \
   --silent \
   --show-error \
-  "http://127.0.0.1:$HOST_PORT/health/ready"
+  "http://127.0.0.1:$host_port/health/ready"
 
 echo "Day 8 deployment completed successfully."
