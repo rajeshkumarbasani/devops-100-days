@@ -5,7 +5,12 @@ credentials.txt
 *.tfstate.*
 #.terraform.lock.hcl
 
-# Terraform
+
+**/.terraform/*
+
+reports/
+.trivy-cache/
+**/node_modules/
 **/.terraform/*
 *.tfstate
 *.tfstate.*

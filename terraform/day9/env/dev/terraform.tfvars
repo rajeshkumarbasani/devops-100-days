@@ -1,0 +1,13 @@
+aws_region="ap-south-1"
+project_name="devops-day9"
+environment="dev"
+owner="Rajeshkumar Basani"
+vpc_cidr="10.90.0.0/16"
+availability_zones=["ap-south-1a","ap-south-1b"]
+public_subnet_cidrs=["10.90.1.0/24","10.90.2.0/24"]
+private_subnet_cidrs=["10.90.11.0/24","10.90.12.0/24"]
+single_nat_gateway=true
+container_image="raj358822/day9-ecs-app:manual"
+desired_count=2
+min_capacity=2
+max_capacity=4

@@ -1,0 +1,13 @@
+.git
+.github
+.gitignore
+README*
+node_modules
+coverage
+*.log
+.env
+.env.*
+terraform
+jenkins
+compose*.yml
+compose*.yaml

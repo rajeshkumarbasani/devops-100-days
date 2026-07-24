@@ -1,0 +1,146 @@
+pipeline {
+  agent any
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    skipDefaultCheckout(true)
+    buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
+    timeout(time: 75, unit: 'MINUTES')
+  }
+  parameters {
+    booleanParam(name: 'APPLY_TERRAFORM', defaultValue: true, description: 'Apply Terraform plan')
+    booleanParam(name: 'PUSH_LATEST_TAG', defaultValue: true, description: 'Push latest tag')
+  }
+  environment {
+    REPO_URL='https://github.com/rajeshkumarbasani/devops-100-days.git'
+    DOCKER_REPOSITORY='raj358822/day9-ecs-app'
+    DOCKER_CONTEXT='docker/day9-app'
+    TEST_CONTAINER='day9-app-test'
+    TEST_PORT='8089'
+    TF_DIR='terraform/day9/env/dev'
+    TF_STATE_BUCKET='raj358822-devops-100-days-tfstate'
+    TF_STATE_KEY='day9/dev/terraform.tfstate'
+    AWS_DEFAULT_REGION='ap-south-1'
+    AWS_REGION='ap-south-1'
+    TF_IN_AUTOMATION='true'
+    TF_INPUT='false'
+    TRIVY_VERSION='0.72.0'
+  }
+  stages {
+    stage('Checkout') {
+      steps {
+        deleteDir()
+        git branch: 'main', credentialsId: 'github-token', url: env.REPO_URL
+        script {
+          env.GIT_SHORT_COMMIT=sh(script:'git rev-parse --short=8 HEAD',returnStdout:true).trim()
+          env.BUILD_DATE_UTC=sh(script:'date -u +%Y-%m-%dT%H:%M:%SZ',returnStdout:true).trim()
+          env.IMMUTABLE_TAG="${BUILD_NUMBER}-${GIT_SHORT_COMMIT}"
+          env.IMMUTABLE_IMAGE="${DOCKER_REPOSITORY}:${IMMUTABLE_TAG}"
+          env.LATEST_IMAGE="${DOCKER_REPOSITORY}:latest"
+        }
+      }
+    }
+    stage('Validate') {
+      steps { sh '''set -eu
+        test -f "$DOCKER_CONTEXT/package-lock.json"
+        terraform fmt -check -recursive terraform/day9
+        git diff --check
+      ''' }
+    }
+    stage('Docker Test Build') {
+      steps { dir(env.DOCKER_CONTEXT) { sh '''set -eu
+        DOCKER_BUILDKIT=1 docker build --check .
+        DOCKER_BUILDKIT=1 docker build --pull --target test-stage -t day9-test:$BUILD_NUMBER .
+      ''' } }
+    }
+    stage('Build Production Image') {
+      steps { dir(env.DOCKER_CONTEXT) { sh '''set -eu
+        DOCKER_BUILDKIT=1 docker build --pull --target runtime-stage \
+          --build-arg BUILD_VERSION="$IMMUTABLE_TAG" \
+          --build-arg BUILD_COMMIT="$GIT_SHORT_COMMIT" \
+          --build-arg BUILD_DATE="$BUILD_DATE_UTC" \
+          -t "$IMMUTABLE_IMAGE" -t "$LATEST_IMAGE" .
+      ''' } }
+    }
+    stage('Hardened Runtime Test') {
+      steps { sh '''set -eu
+        docker rm -f "$TEST_CONTAINER" 2>/dev/null || true
+        docker run -d --name "$TEST_CONTAINER" --read-only --tmpfs /tmp:size=16m,mode=1777 \
+          --security-opt no-new-privileges:true --cap-drop ALL --pids-limit 100 \
+          --memory 256m --cpus 0.50 -e NODE_ENV=production -e APP_VERSION="$IMMUTABLE_TAG" \
+          -p "$TEST_PORT:3000" "$IMMUTABLE_IMAGE"
+        for i in $(seq 1 30); do curl -fsS "http://127.0.0.1:$TEST_PORT/health/ready" && break; sleep 2; done
+        test "$(docker exec "$TEST_CONTAINER" id -u)" != "0"
+      ''' }
+    }
+    stage('Trivy Image Scan') {
+      steps { sh '''set -eu
+        mkdir -p reports
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          -v "$WORKSPACE/reports:/reports" aquasec/trivy:$TRIVY_VERSION image \
+          --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --format json \
+          --output /reports/day9-image.json "$IMMUTABLE_IMAGE"
+      ''' }
+      post { always { archiveArtifacts artifacts:'reports/day9-image.json',allowEmptyArchive:true,fingerprint:true } }
+    }
+    stage('Push Docker Hub') {
+      steps { withCredentials([usernamePassword(credentialsId:'docker-hub-creds',usernameVariable:'DOCKER_USER',passwordVariable:'DOCKER_TOKEN')]) {
+        sh '''set +x; set -eu
+          echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin
+          docker push "$IMMUTABLE_IMAGE"
+          [ "$PUSH_LATEST_TAG" = "true" ] && docker push "$LATEST_IMAGE" || true
+          docker logout
+        '''
+      } }
+    }
+    stage('Terraform Init Validate Plan') {
+      steps { withCredentials([[$class:'AmazonWebServicesCredentialsBinding',credentialsId:'aws-cred',accessKeyVariable:'AWS_ACCESS_KEY_ID',secretKeyVariable:'AWS_SECRET_ACCESS_KEY']]) {
+        dir(env.TF_DIR) { sh '''set +x; set -eu
+          cat > backend.hcl <<BACKEND
+bucket="$TF_STATE_BUCKET"
+key="$TF_STATE_KEY"
+region="$AWS_DEFAULT_REGION"
+use_lockfile=true
+encrypt=true
+BACKEND
+          terraform init -reconfigure -backend-config=backend.hcl
+          terraform validate
+          terraform plan -lock-timeout=5m -var="container_image=$IMMUTABLE_IMAGE" -out=tfplan
+          terraform show -no-color tfplan > tfplan.txt
+        ''' }
+      } }
+      post { success { archiveArtifacts artifacts:'terraform/day9/env/dev/tfplan.txt',fingerprint:true } }
+    }
+    stage('Approval') {
+      when { expression { params.APPLY_TERRAFORM } }
+      options { timeout(time:15,unit:'MINUTES') }
+      steps { input message:"Deploy ${env.IMMUTABLE_IMAGE} to ECS Fargate?",ok:'Deploy' }
+    }
+    stage('Apply and Verify') {
+      when { expression { params.APPLY_TERRAFORM } }
+      steps { withCredentials([[$class:'AmazonWebServicesCredentialsBinding',credentialsId:'aws-cred',accessKeyVariable:'AWS_ACCESS_KEY_ID',secretKeyVariable:'AWS_SECRET_ACCESS_KEY']]) {
+        dir(env.TF_DIR) { sh '''set +x; set -eu
+          terraform apply -lock-timeout=5m -auto-approve tfplan
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          SERVICE=$(terraform output -raw ecs_service_name)
+          URL=$(terraform output -raw application_url)
+          HEALTH=$(terraform output -raw health_url)
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE" --region "$AWS_DEFAULT_REGION"
+          for i in $(seq 1 60); do curl -fsS "$HEALTH" && break; sleep 10; done
+          curl -fsS "$URL"
+          terraform output -json > terraform-output.json
+        ''' }
+      } }
+      post { success { archiveArtifacts artifacts:'terraform/day9/env/dev/terraform-output.json',fingerprint:true } }
+    }
+  }
+  post {
+    always {
+      sh '''docker rm -f "$TEST_CONTAINER" 2>/dev/null || true
+        docker logout 2>/dev/null || true
+        rm -f "$TF_DIR/backend.hcl" "$TF_DIR/tfplan"
+        docker image prune -f || true
+      '''
+    }
+  }
+}

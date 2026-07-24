@@ -1,0 +1,9 @@
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+**/backend.hcl
+**/terraform-output.json
+reports/
+.trivy-cache/
+**/node_modules/

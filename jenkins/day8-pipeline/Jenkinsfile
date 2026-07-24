@@ -353,12 +353,12 @@ pipeline {
                             set -euo pipefail
 
                             cat > backend.hcl <<BACKEND
-bucket       = "$TF_STATE_BUCKET"
-key          = "$TF_STATE_KEY"
-region       = "$AWS_DEFAULT_REGION"
-use_lockfile = true
-encrypt      = true
-BACKEND
+                            bucket       = "$TF_STATE_BUCKET"
+                            key          = "$TF_STATE_KEY"
+                            region       = "$AWS_DEFAULT_REGION"
+                            use_lockfile = true
+                            encrypt      = true
+                            BACKEND
 
                             terraform init \
                               -reconfigure \
