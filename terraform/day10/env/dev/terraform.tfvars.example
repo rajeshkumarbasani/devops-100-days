@@ -1,0 +1,4 @@
+aws_region = "ap-south-1"
+environment = "dev"
+project_name = "devops-day10"
+container_image = "raj358822/day10-app:manual"

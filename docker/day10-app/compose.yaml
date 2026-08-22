@@ -1,0 +1,15 @@
+services:
+  app:
+    build: { context: ., target: runtime, args: { BUILD_VERSION: local } }
+    image: raj358822/day10-app:local
+    ports: ["18010:3000"]
+    environment:
+      CHALLENGE_DAY: "10"
+      CHALLENGE_THEME: "Amazon EKS Foundation"
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    pids_limit: 100
+    mem_limit: 256m
+    cpus: 0.50

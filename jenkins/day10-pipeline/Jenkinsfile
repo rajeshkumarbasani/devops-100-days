@@ -1,0 +1,161 @@
+pipeline {
+  agent any
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    skipDefaultCheckout(true)
+    buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
+    timeout(time: 90, unit: 'MINUTES')
+  }
+  parameters {
+    booleanParam(name: 'APPLY_TERRAFORM', defaultValue: true, description: 'Apply reviewed Terraform plan')
+  }
+  environment {
+    REPO_URL='https://github.com/rajeshkumarbasani/devops-100-days.git'
+    APP_DIR='docker/day10-app'
+    TF_DIR='terraform/day10/env/dev'
+    DOCKER_REPOSITORY='raj358822/day10-app'
+    AWS_DEFAULT_REGION='ap-south-1'
+    AWS_REGION='ap-south-1'
+    TF_IN_AUTOMATION='true'
+    TF_INPUT='false'
+    TRIVY_VERSION='0.72.0'
+  }
+  stages {
+    stage('Checkout') {
+      steps {
+        deleteDir()
+        git branch:'main', credentialsId:'github-token', url:"${REPO_URL}"
+        script {
+          env.GIT_SHA=sh(script:'git rev-parse --short=8 HEAD',returnStdout:true).trim()
+          env.BUILD_DATE_UTC=sh(script:'date -u +%Y-%m-%dT%H:%M:%SZ',returnStdout:true).trim()
+          env.IMAGE_TAG="${BUILD_NUMBER}-${GIT_SHA}"
+          env.FULL_IMAGE="${DOCKER_REPOSITORY}:${IMAGE_TAG}"
+        }
+      }
+    }
+    stage('Validate') {
+      steps {
+        sh '''
+          set -eu
+          git diff --check
+          terraform fmt -check -recursive "terraform/day10"
+          docker build --check "$APP_DIR"
+        '''
+      }
+    }
+    stage('Test') {
+      steps {
+        sh '''
+          set -eu
+          DOCKER_BUILDKIT=1 docker build --pull --target test -t "day10-test:${BUILD_NUMBER}" "$APP_DIR"
+        '''
+      }
+    }
+    stage('Build') {
+      steps {
+        sh '''
+          set -eu
+          DOCKER_BUILDKIT=1 docker build --pull --target runtime \
+            --build-arg BUILD_VERSION="$IMAGE_TAG" \
+            --build-arg BUILD_COMMIT="$GIT_SHA" \
+            --build-arg BUILD_DATE="$BUILD_DATE_UTC" \
+            -t "$FULL_IMAGE" "$APP_DIR"
+        '''
+      }
+    }
+    stage('Hardened Smoke Test') {
+      steps {
+        sh '''
+          set -eu
+          docker rm -f day10-smoke 2>/dev/null || true
+          docker run -d --name day10-smoke \
+            --read-only --tmpfs /tmp:size=16m,mode=1777 \
+            --security-opt no-new-privileges:true --cap-drop ALL \
+            --pids-limit 100 --memory 256m --cpus 0.50 \
+            -e CHALLENGE_DAY=10 -e CHALLENGE_THEME="Amazon EKS Foundation" \
+            -p 18010:3000 "$FULL_IMAGE"
+          ok=0
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:18010/health/ready && ok=1 && break
+            sleep 2
+          done
+          test "$ok" -eq 1
+          test "$(docker exec day10-smoke id -u)" != "0"
+        '''
+      }
+    }
+    stage('Trivy') {
+      steps {
+        sh '''
+          set -eu
+          mkdir -p reports
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$WORKSPACE/reports:/reports" "aquasec/trivy:${TRIVY_VERSION}" image \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+            --format json --output /reports/image.json "$FULL_IMAGE"
+          docker run --rm -v "$WORKSPACE:/workspace" -w /workspace \
+            "aquasec/trivy:${TRIVY_VERSION}" config --severity HIGH,CRITICAL \
+            --exit-code 1 "terraform/day10"
+        '''
+      }
+      post { always { archiveArtifacts artifacts:'reports/image.json', allowEmptyArchive:true, fingerprint:true } }
+    }
+    stage('Push') {
+      steps {
+        withCredentials([usernamePassword(credentialsId:'docker-hub-creds',usernameVariable:'DH_USER',passwordVariable:'DH_TOKEN')]) {
+          sh '''
+            set +x
+            echo "$DH_TOKEN" | docker login -u "$DH_USER" --password-stdin
+            docker push "$FULL_IMAGE"
+            docker logout
+          '''
+        }
+      }
+    }
+    stage('Terraform Plan') {
+      steps {
+        withCredentials([[$class:'AmazonWebServicesCredentialsBinding',credentialsId:'aws-cred',accessKeyVariable:'AWS_ACCESS_KEY_ID',secretKeyVariable:'AWS_SECRET_ACCESS_KEY']]) {
+          dir("${TF_DIR}") {
+            sh '''
+              set +x
+              terraform init
+              terraform validate
+              terraform plan -lock-timeout=5m -var="container_image=$FULL_IMAGE" -out=tfplan
+              terraform show -no-color tfplan > tfplan.txt
+            '''
+          }
+        }
+      }
+      post { success { archiveArtifacts artifacts:'terraform/day10/env/dev/tfplan.txt', fingerprint:true } }
+    }
+    stage('Approval') {
+      when { expression { params.APPLY_TERRAFORM } }
+      steps { input message:"Deploy ${FULL_IMAGE}?", ok:'Deploy' }
+    }
+    stage('Apply') {
+      when { expression { params.APPLY_TERRAFORM } }
+      steps {
+        withCredentials([[$class:'AmazonWebServicesCredentialsBinding',credentialsId:'aws-cred',accessKeyVariable:'AWS_ACCESS_KEY_ID',secretKeyVariable:'AWS_SECRET_ACCESS_KEY']]) {
+          dir("${TF_DIR}") {
+            sh '''
+              set +x
+              terraform apply -lock-timeout=5m -auto-approve tfplan
+              terraform output -json > terraform-output.json
+            '''
+          }
+        }
+      }
+      post { success { archiveArtifacts artifacts:'terraform/day10/env/dev/terraform-output.json', fingerprint:true } }
+    }
+  }
+  post {
+    always {
+      sh '''
+        docker rm -f day10-smoke 2>/dev/null || true
+        docker logout 2>/dev/null || true
+        docker image rm "day10-test:${BUILD_NUMBER}" 2>/dev/null || true
+      '''
+    }
+  }
+}
